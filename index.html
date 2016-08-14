@@ -1,0 +1,102 @@
+---
+layout: default
+---
+
+<h2>Welcome to the tutorial</h2>
+
+<h3>The goal</h3>
+<p>
+The goal of this tutorial is to present a very simple example of a YaST module
+developed from scratch. The document is focused in the tools and the overall
+architecture used for such a simple development. Many other interesting YaST
+subjects, like modifying the installer or accessing complex configurations in
+the underlying system, are intentionally left out.
+</p>
+<p>
+You, as a reader, are expected to be familiar with the Ruby programming language
+at least to a certain degree. No general Ruby subjects will be explained, but
+you can always check the introduction documents recommended by the excellent
+<a href="http://ruby-doc.org/">ruby-doc.org Ruby documentation project</a>.
+</p>
+
+<h3>Setting up the environment</h3>
+
+<p>
+This tutorial is better followed using a recent version of openSUSE (tested in
+openSUSE 13.2). Of course, using openSUSE Tumbleweed would be even better, since
+it's the recommended development environment for YaST.
+</p>
+<p>
+Everything needed in order to set up the YaST development environment is
+detailed in the &quot;contributing&quot; section of the
+<a href="http://yast.github.io">YaST development home page</a>. In a recent
+openSUSE, it's as simple as installing Git, the YaST development tools and the
+YaST-Rake gem. The first two are easily installed running:
+</p>
+{% highlight bash %}
+zypper install git-core yast2-devtools
+{% endhighlight %}
+<p>
+In order to install Ruby gems for YaST development you should always install the
+package that corresponds to the version of Ruby that is used by default in your
+system. For example, in systems based in Ruby 2.1, the package name would be
+"ruby2.1-rubygem-yast-rake". The following set of commands will always install
+the right package by first guessing your Ruby version and storing it in a
+variable (make sure there are no spaces before and after "=").
+</p>
+{% highlight bash %}
+ruby_version=$(ruby -e "puts RbConfig::CONFIG['ruby_version']")
+zypper install -C "rubygem(ruby:$ruby_version:yast-rake)"
+{% endhighlight %}
+
+<h3>The method</h3>
+
+<p>
+This document is a step by step tutorial to develop a module called
+yast-journalctl which resembles a lot the already existing
+<a href="https://github.com/ancorgs/yast-journal">yast-journal</a>. In fact,
+this tutorial reflects closely the author's own learning experience while
+developing yast-journal as his first YaST module. From that point of view, this
+is a tutorial for newbies written by a newbie.
+</p>
+<p>
+All the example code and files used in the tutorial are available at
+<a href="https://github.com/yast/yast-journalctl-tutorial">this
+GitHub repository</a> and organized following the learning time-line.
+The tutorial is divided into small steps and every step correspond with a tag in
+the repository's history, so instead of reading some chunks of code embedded in
+the tutorial's text, you can actually go back and forward in time and
+freely explore the whole tree with your favorite source code editor.
+</p>
+<p>
+If you are proficient with git, feel free to play with the repository. Otherwise
+it's better to do not change anything in your local copy of the repository and
+just use the provided commands to browse the history while writing your own code
+in a different clean directory.
+</p>
+
+<h3>A look into the future</h3>
+<p>
+As a first step, simply clone the repository to have your own local copy.
+</p>
+{% highlight bash %}
+git clone https://github.com/yast/yast-journalctl-tutorial
+{% endhighlight %}
+<p>
+Right after cloning, you can already see how the final result will look
+like once you have finished the tutorial.
+</p>
+{% highlight bash %}
+cd yast-journalctl-tutorial
+rake run
+{% endhighlight %}
+<p>
+If it shows too few journal entries for your taste (or even none), try to
+run it again with the root user, who has full access to the systemd journal.
+</p>
+
+<h3>Let's start</h3>
+<p>
+If you were able to execute the module, you are ready to proceed to the next
+step by clicking on <a href="step1.html">Step 1/7</a>.
+</p>

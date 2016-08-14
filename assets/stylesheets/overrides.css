@@ -1,0 +1,21 @@
+body {
+  padding-top: 0px;
+}
+
+.navbar-nav > li > a {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.navbar {
+  min-height: 0px;
+  border-radius: 0px;
+  margin-bottom: 0px;
+}
+
+.centered {
+  margin: 4px 0 4px 0;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
