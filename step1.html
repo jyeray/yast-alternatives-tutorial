@@ -39,7 +39,7 @@ You will find that directory in every YaST module and you will soon find why.
 </p>
 <p>
 Inside that directory there are only two files: &quot;clients/mockup.rb&quot;
-and &quot;lib/journalctl/mockup_dialog.rb&quot;. The first one is mainly
+and &quot;lib/y2_alternatives/mockup_dialog.rb&quot;. The first one is mainly
 a Ruby script. Whatever code is there, it will be executed right away when
 calling the client. Several old YaST modules contain clients with the
 functionality implemented in-line. This is now considered harmful since it makes
@@ -49,8 +49,8 @@ on those classes. As you can see, our mockup client simply calls the method
 &quot;run&quot; of a MockupDialog object.
 </p>
 {% highlight ruby %}
-require "journalctl/mockup_dialog"
-Journalctl::MockupDialog.new.run
+require "y2_alternatives/mockup_dialog"
+y2_alternatives::MockupDialog.new.run
 {% endhighlight %}
 <p>
 All the interesting code for this first &quot;hello world&quot; is in
@@ -81,14 +81,14 @@ is not implemented in Ruby and thus will be used through its published YCP
 interface.
 </p>
 <p>
-In the following lines we simply define a Journalctl namespace (for hygienic
+In the following lines we simply define a Y2Alternatives namespace (for hygienic
 reasons) and our class including several mixins provided by the YaST Ruby
 bindings.
 </p>
 {% highlight ruby %}
-module Journalctl
+module Y2Alternatives
   class MockupDialog
-  
+
     include Yast::UIShortcuts
     include Yast::I18n
     include Yast::Logger
@@ -104,7 +104,7 @@ The first mixin provides several methods to increase the
 readability of the code used to define the user interface, but to fully
 understand how it works it's convenient to understand the YCP's concept of
 &quot;term&quot;. A term is one of the basic data types in the YaST Components
-Protocol and the main mechanism to defer the execution of a piece of code. 
+Protocol and the main mechanism to defer the execution of a piece of code.
 The definition of the UI is done using a tree-like structure of YCP terms where
 each term represents a function call. For example, the following ruby code
 defines a tree of terms that will be translated to the corresponding calls
