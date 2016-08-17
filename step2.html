@@ -63,7 +63,7 @@ end
 def event_loop
   loop do
     input = Yast::UI.UserInput
-    if input == :cancel
+    if input == :cancel or input == :accept
       # Break the loop
       break
     else
@@ -92,33 +92,14 @@ def create_dialog
   Yast::UI.OpenDialog(
     Opt(:decorated, :defaultsize),
     VBox(
-      # Header
-      Heading(_("Journal entries")),
-
-      # Boot selector
-      Frame(
-        _("Log entries for"),
-        boot_widget
-      ),
-      VSpacing(0.3),
-
-      # Filter checkboxes
-      Frame(
-        _("Filters"),
-        filters_widget
-      ),
-      VSpacing(0.3),
-
-      # Refresh
-      Right(PushButton(Id(:refresh), _("Refresh"))),
-      VSpacing(0.3),
-
-      # Log entries
-      table,
-      VSpacing(0.3),
-
-      # Quit button
-      PushButton(Id(:cancel), Yast::Label.QuitButton)
+      filters,
+      create_table,
+      # Add some buttons
+      HBox(
+        PushButton(Id(:edit_alternative), Yast::Label.EditButton),
+        PushButton(Id(:cancel), Yast::Label.CancelButton),
+        PushButton(Id(:accept), Yast::Label.AcceptButton)
+      )
     )
   )
 end
