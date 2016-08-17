@@ -35,7 +35,7 @@ URL</a> is packed with nice examples of the usage of libYUI widgets from Ruby.
 
 <h3>Taking a look to the code</h3>
 <p>
-After having a look to the abovementioned documentation, feel free to start
+After having a look to the above mentioned documentation, feel free to start
 modifying MockupDialog yourself. When you are done (or right away if you are
 impatient), check the proposed example.
 </p>
@@ -76,14 +76,14 @@ end
 For developers coming from more classical GUI toolkits like Gtk or
 Qt, the need to write an event loop can look strange. As opposed to those
 toolkits, libYUI is not event-driven because that approach does not completely
-fit the typical YaST application work-flow. Just in case you wonder, in the next
-step of this tutorial a second dialog will be added to our module and then
-you'll see a clear example of such a typical YaST dialog (not event-driven).
+fit the typical YaST application work-flow. Just in case you wonder, a second
+dialog will be added to our module in the comming steps and then you'll see a
+clear example of such a typical YaST dialog (not event-driven).
 </p>
 <p>
 The other interesting method is &quot;create_dialog&quot; in which the content
 passed to Yast::UI.OpenDialog has changed from the simplistic label of the
-previous example to a full tree of widgets (YaST terms created using the UI
+previous example to a more complex tree of widgets (YaST terms created using the UI
 shortcuts, if you remember) with a vertical box as the root node.
 </p>
 {% highlight ruby %}
