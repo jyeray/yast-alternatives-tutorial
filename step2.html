@@ -116,10 +116,8 @@ Y2DIR=src/ /usr/sbin/yast2 mockup
 <p>And this is what you get.</p>
 <img class="centered" src="assets/images/step2-qt.png">
 <p>
-If you are not specially picky, the graphical interface looks acceptable. It's
-quite cluttered but still useful. Sure there are some layout issues but you
-think they could be fixed with no much work. After all, you have decided to
-start writing a YaST module from scratch, so sure you are an optimistic person.
+The graphical interface looks acceptable. There is only a search field, a filter
+and a table big enough to show some alternatives.
 </p>
 <p>
 But there is something you should never forget when developing a YaST module - it
@@ -130,16 +128,14 @@ So the next step is to resize your terminal emulator to a size of 80x25 and run:
 Y2DIR=src/ /usr/sbin/yast2 --ncurses mockup
 {% endhighlight %}
 <p>
-The result looked far from perfect in graphical mode, but with ncurses and a
-size of 80x25 it looks almost catastrophic. Very little space is left for the
-log entries, which is the most relevant part. Needless to say, it will become
-even worst if we add more filters in the future.
+The result look nice too, but note that if some filters more are added the table
+may be too small to show the alternatives, which is the most relevant part. So
+always keep in mind the ncurses view.
 </p>
 <img class="centered" src="assets/images/step2-ncurses.png">
 
-<h3>Let's try again</h3>
+<h3>Show real data</h3>
 <p>
-From the previous screenshot, it's obvious that we need to rethink our user
-interface to avoid having everything in one single dialog. Time for the
-<a href="step3.html">next step</a>.
+Now that we have our mockup, it's time to view some real data in the mockup, so
+let's grab a coffee and prepare for the the <a href="step3.html">next step</a>.
 </p>
