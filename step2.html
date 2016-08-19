@@ -11,11 +11,11 @@ start adding some widgets to it in order to have a proper mockup of the user
 interface. Let's take a look to what we need:
 </p>
 <ul>
-  <li>a table to display the log entries,</li>
-  <li>some radio buttons to select which boot,</li>
-  <li>some check-boxes to enable and disable filters,</li>
-  <li>a button to refresh the entries table when the filters change,</li>
-  <li>last but not least, a button to quit.</li>
+  <li>a table to display the alternatives,</li>
+  <li>an input field to search an particular alternative,</li>
+  <li>a check-box to filter the alternatives that only have one choice,</li>
+  <li>a button to edit the alternative selected on the table,</li>
+  <li>last but not least, a cancel and accept buttons.</li>
 </ul>
 <p>
 That sounds challenging enough for a newbie, let's go for it!
@@ -35,7 +35,7 @@ URL</a> is packed with nice examples of the usage of libYUI widgets from Ruby.
 
 <h3>Taking a look to the code</h3>
 <p>
-After having a look to the abovementioned documentation, feel free to start
+After having a look to the above mentioned documentation, feel free to start
 modifying MockupDialog yourself. When you are done (or right away if you are
 impatient), check the proposed example.
 </p>
@@ -63,7 +63,7 @@ end
 def event_loop
   loop do
     input = Yast::UI.UserInput
-    if input == :cancel
+    if input == :cancel or input == :accept
       # Break the loop
       break
     else
@@ -76,14 +76,14 @@ end
 For developers coming from more classical GUI toolkits like Gtk or
 Qt, the need to write an event loop can look strange. As opposed to those
 toolkits, libYUI is not event-driven because that approach does not completely
-fit the typical YaST application work-flow. Just in case you wonder, in the next
-step of this tutorial a second dialog will be added to our module and then
-you'll see a clear example of such a typical YaST dialog (not event-driven).
+fit the typical YaST application work-flow. Just in case you wonder, a second
+dialog will be added to our module in the comming steps and then you'll see a
+clear example of such a typical YaST dialog (not event-driven).
 </p>
 <p>
 The other interesting method is &quot;create_dialog&quot; in which the content
 passed to Yast::UI.OpenDialog has changed from the simplistic label of the
-previous example to a full tree of widgets (YaST terms created using the UI
+previous example to a more complex tree of widgets (YaST terms created using the UI
 shortcuts, if you remember) with a vertical box as the root node.
 </p>
 {% highlight ruby %}
@@ -92,33 +92,14 @@ def create_dialog
   Yast::UI.OpenDialog(
     Opt(:decorated, :defaultsize),
     VBox(
-      # Header
-      Heading(_("Journal entries")),
-
-      # Boot selector
-      Frame(
-        _("Log entries for"),
-        boot_widget
-      ),
-      VSpacing(0.3),
-
-      # Filter checkboxes
-      Frame(
-        _("Filters"),
-        filters_widget
-      ),
-      VSpacing(0.3),
-
-      # Refresh
-      Right(PushButton(Id(:refresh), _("Refresh"))),
-      VSpacing(0.3),
-
-      # Log entries
-      table,
-      VSpacing(0.3),
-
-      # Quit button
-      PushButton(Id(:cancel), Yast::Label.QuitButton)
+      filters,
+      create_table,
+      # Add some buttons
+      HBox(
+        PushButton(Id(:edit_alternative), Yast::Label.EditButton),
+        PushButton(Id(:cancel), Yast::Label.CancelButton),
+        PushButton(Id(:accept), Yast::Label.AcceptButton)
+      )
     )
   )
 end
@@ -135,10 +116,8 @@ Y2DIR=src/ /usr/sbin/yast2 mockup
 <p>And this is what you get.</p>
 <img class="centered" src="assets/images/step2-qt.png">
 <p>
-If you are not specially picky, the graphical interface looks acceptable. It's
-quite cluttered but still useful. Sure there are some layout issues but you
-think they could be fixed with no much work. After all, you have decided to
-start writing a YaST module from scratch, so sure you are an optimistic person.
+The graphical interface looks acceptable. There is only a search field, a filter
+and a table big enough to show some alternatives.
 </p>
 <p>
 But there is something you should never forget when developing a YaST module - it
@@ -149,16 +128,14 @@ So the next step is to resize your terminal emulator to a size of 80x25 and run:
 Y2DIR=src/ /usr/sbin/yast2 --ncurses mockup
 {% endhighlight %}
 <p>
-The result looked far from perfect in graphical mode, but with ncurses and a
-size of 80x25 it looks almost catastrophic. Very little space is left for the
-log entries, which is the most relevant part. Needless to say, it will become
-even worst if we add more filters in the future.
+The result look nice too, but note that if some filters more are added the table
+may be too small to show the alternatives, which is the most relevant part. So
+always keep in mind the ncurses view.
 </p>
 <img class="centered" src="assets/images/step2-ncurses.png">
 
-<h3>Let's try again</h3>
+<h3>Show real data</h3>
 <p>
-From the previous screenshot, it's obvious that we need to rethink our user
-interface to avoid having everything in one single dialog. Time for the
-<a href="step3.html">next step</a>.
+Now that we have our mockup, it's time to view some real data in the mockup, so
+let's grab a coffee and prepare for the the <a href="step3.html">next step</a>.
 </p>
