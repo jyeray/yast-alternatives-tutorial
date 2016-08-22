@@ -8,47 +8,30 @@ layout: default
 <p>
 Having completed the previous steps, we now have a clear view on how the
 interface will look like. The next logical step is to get some data to display
-there. The only way to access the systemd journal in a Linux system is the
-journalctl command. Fortunately journalctl is very flexible and supports many
-output formats, some of them very convenient for automatic processing. For
-example, this command will print to the standard output all the journal entries
-generated since the last system's startup in JSON format.
+there. To achive that it is necessary to read the output of update-alternative
+command and parse the information to objects in our module. Fortunately exist a
+tool to execute any command and get the result very easily, this tool is
+<a href="https://github.com/openSUSE/cheetah">Cheetah</a>. As it is said on
+Cheetah's github to install it only is necessary to execute the following command.
 </p>
 {% highlight bash %}
-journalctl --no-pager -o json -b 0
+gem install cheetah
 {% endhighlight %}
 <p>
-As explained in the architecture description found in the
-<a href="http://yast.github.io/documentation.html">YaST documentation</a>, YaST
-offers a very convenient way to communicate with the underlying Linux system -
-the SCR component and its agents. Each agent takes care of a very concrete type
-of system resource and implements a common interface with just four operations:
-read, write, dir and execute. The SCR component uses YCP paths to identify the
-agent and the concrete action. A path is a YCP-specific data type designed to
-denote nodes from tree-like structures using labels and dots. For example,
-since the SCR agent parsing the file &quot;/etc/sysconfig/clock&quot; is
-attached to the path &quot;.sysconfig.clock&quot;, the following Ruby code can
-be used to read the value of the TIMEZONE parameter in that file.
+Once cheetah is installed, you can verify that it is true, its very simple to
+execute commands. For example it is possible to extract a .tar in the following
+way.
 </p>
-{% highlight ruby %}
-path = Yast::Path.new(".sysconfig.clock.TIMEZONE")
-Yast::SCR.Read(path)
+{% highlight bash %}
+Cheetah.run("tar", "xzf", "foo.tar.gz")
 {% endhighlight %}
 <p>
-The most widely used YaST agent is called Target and offers an
-interface to (shell) commands of the target Linux system. Unsurprisingly, the
-Target agent is attached to the ".target" path. One of the many commands
-offered by the Target agent is &quot;bash_output&quot;, which executes a
-command in the target system and returns a structure including &quot;exit&quot;
-for the exit code, &quot;stdout&quot; for the command output and
-&quot;stderr&quot; for the error messages.
+But what happens if it is necessary to get some information not only execute a
+command? Cheetah also allows that.
 </p>
-<p>
-You can read more about the agents, including a full description of the
-functionality provided by the Target agent, in the
-<a href="http://www.rubydoc.info/github/yast/yast-core/">YaST core
-documentation</a>.
-</p>
+{% highlight bash %}
+output_ls = Cheetah.run("ls", "la", stdout: :capture)
+{% endhighlight %}
 
 <h3>The Journalctl::Entry class</h3>
 <p>
