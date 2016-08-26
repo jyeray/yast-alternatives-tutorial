@@ -2,138 +2,170 @@
 layout: default
 ---
 
-<h2>Communication with the underlying system</h2>
+<h2>Automation and testing</h2>
 
-<h3>The available tools</h3>
+<h3>The YaST rake tasks</h3>
 <p>
-Having completed the previous steps, we now have a clear view on how the
-interface will look like. The next logical step is to get some data to display
-there. The only way to access the systemd journal in a Linux system is the
-journalctl command. Fortunately journalctl is very flexible and supports many
-output formats, some of them very convenient for automatic processing. For
-example, this command will print to the standard output all the journal entries
-generated since the last system's startup in JSON format.
+During the introduction section of this tutorial we used a rake task to execute
+our YaST module. This and many other tasks are provided by the
+<a href="https://rubygems.org/gems/yast-rake">yast-rake gem</a>. We already have
+the gem installed in our system, so adding a very simple Rakefile will
+immediately supercharge our prototype. To checkout that file, simply run:
 </p>
 {% highlight bash %}
-journalctl --no-pager -o json -b 0
+git checkout rakefile
 {% endhighlight %}
 <p>
-As explained in the architecture description found in the
-<a href="http://yast.github.io/documentation.html">YaST documentation</a>, YaST
-offers a very convenient way to communicate with the underlying Linux system -
-the SCR component and its agents. Each agent takes care of a very concrete type
-of system resource and implements a common interface with just four operations:
-read, write, dir and execute. The SCR component uses YCP paths to identify the
-agent and the concrete action. A path is a YCP-specific data type designed to
-denote nodes from tree-like structures using labels and dots. For example,
-since the SCR agent parsing the file &quot;/etc/sysconfig/clock&quot; is
-attached to the path &quot;.sysconfig.clock&quot;, the following Ruby code can
-be used to read the value of the TIMEZONE parameter in that file.
+As you can see, the new Rakefile contains only the following line.
 </p>
 {% highlight ruby %}
-path = Yast::Path.new(".sysconfig.clock.TIMEZONE")
-Yast::SCR.Read(path)
+require "yast/rake"
 {% endhighlight %}
 <p>
-The most widely used YaST agent is called Target and offers an
-interface to (shell) commands of the target Linux system. Unsurprisingly, the
-Target agent is attached to the ".target" path. One of the many commands
-offered by the Target agent is &quot;bash_output&quot;, which executes a
-command in the target system and returns a structure including &quot;exit&quot;
-for the exit code, &quot;stdout&quot; for the command output and
-&quot;stderr&quot; for the error messages.
-</p>
-<p>
-You can read more about the agents, including a full description of the
-functionality provided by the Target agent, in the
-<a href="http://www.rubydoc.info/github/yast/yast-core/">YaST core
-documentation</a>.
-</p>
-
-<h3>The Journalctl::Entry class</h3>
-<p>
-Taking into consideration all the above information, looks like we have in our
-toolbox everything we need in order to implement a class representing
-systemd journal entries and offering methods to retrieve them from the
-target system. Feel free to design and implement your our solution. You can
-find the proposed one in &quot;src/lib/journalctl/entry.rb&quot; right after
-executing:
+That's enough to add all the YaST rake tasks to our module. As usual, you can
+ask rake to list all the available tasks.
 </p>
 {% highlight bash %}
-git checkout domain_models
+rake -T
 {% endhighlight %}
 <p>
-As you can see, the public interface offered by this class is very simple, just
-a class method called &quot;all&quot; which will return an array of Entry
-objects and some attribute readers for the relevant information of each entry.
-The only method containing YaST-specific code is &quot;journalctl_output&quot;,
-which relies on the abovementioned Target SCR agent. The proposed solution
-includes some handling for known journalctl errors.
+Now, let's try some of the useful available tasks. But first we need to install
+"rubygem-gettext".
+</p>
+{% highlight bash %}
+ruby_version=$(ruby -e "puts RbConfig::CONFIG['ruby_version']")
+zypper install -C "rubygem(ruby:$ruby_version:gettext)"
+{% endhighlight %}
+<p>
+Now we can use this three very simple but handy tasks to check our code.
+</p>
+{% highlight bash %}
+rake check:license
+rake check:pot
+rake check:syntax
+{% endhighlight %}
+<p>
+As you already know, there are also tasks for running the software. One for
+executing our mockup client and another one for invoking a Ruby interpreter with
+our code already pre-loaded.
+</p>
+{% highlight bash %}
+rake run
+rake console
+{% endhighlight %}
+<p>
+You can paste the example code about Journalctl:Query usage at the end of the
+<a href="step4.html">previous step</a> directly into the interpreter opened by
+&quot;rake console&quot; and everything will work out of the box.
+</p>
+<p>
+As mentioned, we will explore other tasks (mostly related to packaging) in an
+upcoming step, but first we need to finish our prototype.
+</p>
+
+<h3>The RSpec tests</h3>
+<p>
+Of course, no Ruby class is complete without the corresponding unit tests.
+Thus we need unit tests for our Entry and Query classes before proceeding with
+any further action. As many other Ruby-based projects, YaST uses
+<a href="http://rspec.info/">RSpec</a> (version 2 at the time of writing)
+for unit testing. In the
+<a href="http://yast.github.io/guidelines.html">guidelines section</a> of the
+YaST home page you will find some recommendations for writing YaST tests.
+</p>
+<p>
+To checkout some example unit tests for our models run the following command.
+</p>
+{% highlight bash %}
+git checkout unit_tests
+{% endhighlight %}
+<p>
+Before running the tests, make sure you have RSpec installed. You can install
+it using zypper:
+</p>
+{% highlight bash %}
+ruby_version=$(ruby -e "puts RbConfig::CONFIG['ruby_version']")
+zypper install -C "rubygem(ruby:$ruby_version:rspec)"
+{% endhighlight %}
+<p>
+Under the &quot;test&quot; directory you will find the corresponding RSpec
+unit tests for Entry and Query. Those tests are just a simple example and
+are not completely exhaustive. Feel free to implement any additional check.
+You can run the tests using the following YaST rake task.
+</p>
+{% highlight bash %}
+rake test:unit
+{% endhighlight %}
+<p>
+This will execute RSpec with all the files located in the &quot;test&quot;
+directory with a name ending with &quot;_test.rb&quot; or &quot;_spec.rb&quot;.
+This task is crucial in the development work-flow of any YaST module. It's
+always executed before building a package and before integrating any pull
+request into the repositories, so better make sure that your module always
+contains a comprehensive and updated suite of unit tests. Moreover, the unit
+tests are considered by some YaST developers as the only authoritative
+documentation for the programming interface of a class (since they are by
+definition always up-to-date).
+</p>
+<p>
+Let's take a look to the implementation of the provided example test suite.
+To ensure that all the classes, modules and clients defined in our code
+are available during the tests (in a predictable path), we use the same trick
+that we used for running the mockup on previous steps - setting the Y2DIR
+environment variable. Thus, the first line of the spec_helper.rb file included
+in every test looks like this.
 </p>
 {% highlight ruby %}
-JOURNALCTL = "LANG=C journalctl --no-pager -o json"
-
-# Handles the journalctl call
-#
-# @param args [String] arguments to journalctl
-# @return [String] command output
-def self.journalctl_output(args)
-  cmd = "#{JOURNALCTL} #{args}".strip
+ENV["Y2DIR"] = File.expand_path("../../src", __FILE__)
+{% endhighlight %}
+<p>
+When writing YaST tests is very important to
+<a href="http://www.rubydoc.info/gems/rspec-mocks/">stub</a> the usage of SCR
+agents. Otherwise, they will perform their operations on the system running the
+tests, which can lead to inconsistent results and even big troubles if these
+operations involve something more dangerous than reading the systemd journal.
+There are plans to include that functionality into the YaST Ruby bindings in the
+near future and offer convenient RSpec helpers to deal with SCR. Meanwhile, the
+proposal in this tutorial shows a simple solution for the particular case of
+stubbing the calls to journalctl (and other commands) using the
+&quot;.target.bash_output&quot; path.
+</p>
+{% highlight ruby %}
+# Stub a command execution
+def allow_to_execute(cmd)
   path = Yast::Path.new(".target.bash_output")
-  cmd_result = Yast::SCR.Execute(path, cmd)
+  allow(Yast::SCR).to receive(:Execute).with(path, cmd)
+end
+{% endhighlight %}
+<p>
+The following code extracted from entry_test.rb shows how the above
+helper method can then be used (together with other methods defined in
+spec_helper.rb) to write safe specs that simulate the underlying system.
+</p>
+{% highlight ruby %}
+describe ".all" do
+  subject { Journalctl::Entry.all }
+  # Stub journalctl call
+  before do
+    allow_to_execute(/LANG=C journalctl/).and_return(result)
+  end
 
-  if cmd_result["exit"].zero?
-    cmd_result["stdout"]
-  else
-    if cmd_result["stderr"] =~ /^Failed to .* timestamp:/
-      # Most likely, journalctl bug when an empty list is found
-      ""
-    else
-      raise "Calling journalctl failed: #{cmd_result["stderr"]}"
+  context "when journalctl reports 'Failed to determine timestamp'" do
+    let(:result) {
+      journalctl_error("Failed to determine timestamp: Cannot assign")
+    }
+
+    it "returns an empty array" do
+      expect(subject).to eq([])
     end
   end
 end
 {% endhighlight %}
 
-<h3>The Journalctl::Query class</h3>
+<h2>Almost there</h2>
 <p>
-Using the Entry class directly would require to know the syntax of the
-journalctl arguments. In order to abstract the details and also as a way to
-provide some introspection capabilities for the user interface, a
-Journalctl::Query class is implemented in
-&quot;src/lib/journalctl/query.rb&quot;. The usage is again quite simple, as
-shown by the following example.
-</p>
-{% highlight ruby %}
-require "journalctl/query"
-
-query = Journalctl::Query.new(boot: -1, priority: 5)
-puts "First entry's process: #{query.entries.first.process_name}"
-puts "Using priority #{query.filters[:priority]}"
-{% endhighlight %}
-<p>
-This looks like good API to support not only the user interface we designed in
-the previous steps but also any other Ruby code needing access to the systemd
-journal. &quot;But is that enough?&quot; you may wonder. After all, YaST is a
-multi-language beast and maybe you should provide a YCP interface for your
-journalctl wrapper to be used from other programming languages. Fortunately,
-the answer is that you don't have to worry about it. YCP is still a core
-technology for YaST, but it's considered legacy. Ruby is the future of
-YaST and thus all new code is expected to focus only in Ruby and its ecosystem.
-</p>
-
-<h3>Laying the foundation</h3>
-<p>
-We already have a basic user interface and some domain models capable of reading
-the information we need from the system. But before starting to put both things
-together we need to ensure that we are standing on solid ground.
-</p>
-<p>
-First of all, we obviously need to write unit tests for our new models.
-Moreover, it would be nice to have some tools to check that our code can be
-properly executed and complies with the YaST standards.
-</p>
-<p>
-So before we continue writing code, let's take a look to the available YaST
-development tools in the <a href="step5.html">next step</a> of the tutorial.
+Now we can finally say that we have all the pieces: tested models, a user
+interface and all the necessary tools. Only <a href="step6.html">one step</a>
+away from our first fully-functional YaST module (and two steps away
+from the end of the training).
 </p>
