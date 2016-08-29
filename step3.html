@@ -78,6 +78,83 @@ def self.load(name)
   )
 end
 {% endhighlight %}
+<p>
+But that is not all, we need to keep in mind that our target with this module is
+to manage the update-alternatives switching. And exists two possible actions
+that the user could do with every alternative, change the current choice to
+another one, and set the mode in automatic. The following methods offer these
+options.
+</p>
+{% highlight ruby %}
+def choose!(new_choice_path)
+  if !choices.map(&:path).include?(new_choice_path)
+    raise "The alternative doesn't have any choice with path '#{new_choice_path}'"
+  end
+  @value = new_choice_path
+  @status = "manual"
+  @modified = true
+end
+
+def automatic_mode!
+  @status = "auto"
+  @value = choices.sort_by { |choice| choice.priority.to_i }.last.path
+  @modified = true
+end
+{% endhighlight %}
+<p>
+Note that these methods doesn't modify the alternatives in the system, only the
+object in memory. This is because the typical YaST flow, first the user make the
+changes, and when the user click the Accept button, these changes are saved in
+the system.
+</p>
+<p>To follow this way, the methods avobe put the "@modified" flag to
+true. This flag will be checked in the method below, which responsability is to
+save in the system the changes made to the alternative.
+</p>
+{% highlight ruby %}
+def save
+  return unless @modified
+  STATUS_COMMANDS[@status].execute(self)
+end
+{% endhighlight %}
+<p>
+After check that the alternative has been modified, the save method execute one
+of the existing commands depending on the changes made to the alternative. These
+commands are two, one for set a choice and the other to set the automatic mode.
+Let's see those commands.
+</p>
+{% highlight ruby %}
+require "cheetah"
+
+module Y2Alternatives
+  module Control
+    # Command to change the selected choice of an alternative.
+    class SetChoiceCommand
+      def self.execute(alternative)
+        Cheetah.run("update-alternatives", "--set", alternative.name, alternative.value)
+      end
+    end
+  end
+end
+{% endhighlight %}
+{% highlight ruby %}
+require "cheetah"
+
+module Y2Alternatives
+  module Control
+    # Command to set an alternative in automatic mode.
+    class AutomaticModeCommand
+      def self.execute(alternative)
+        Cheetah.run("update-alternatives", "--auto", alternative.name)
+      end
+    end
+  end
+end
+{% endhighlight %}
+<p>
+As you can see both are pretty similar and simple, only one method that execute
+a Cheetah call.
+</p>
 <h3>Laying the foundation</h3>
 <p>
 We already have a basic user interface and some domain models capable of reading
