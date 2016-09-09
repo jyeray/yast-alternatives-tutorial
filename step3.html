@@ -2,126 +2,171 @@
 layout: default
 ---
 
-<h2>Combining several dialogs</h2>
+<h2>Communication with the underlying system</h2>
 
-<h3>Splitting the interface</h3>
+<h3>The available tools</h3>
 <p>
-Now that we have learned how precious the screen space is in YaST dialogs,
-the obvious next step is to split the widgets in 2 different dialogs. The
-solution proposed in this tutorial uses one dialog to display the log entries
--with some additional live filtering capabilities- and a second one containing
-all the controls that we need for fine-tuning the filters. A picture is
-worth a thousand words.
-</p>
-<img class="centered" src="assets/images/step3-ui.png">
-<p>
-For a better understanding of the interface, simply checkout the corresponding
-revision in the git local copy and play with it.
+Having completed the previous steps, we now have a clear view on how the
+interface will look like. The next logical step is to get some data to display
+there. To achive that it is necessary to read the output of update-alternative
+command and parse the information to objects in our module. Fortunately exist a
+tool to execute any command and get the result very easily, this tool is
+<a href="https://github.com/openSUSE/cheetah">Cheetah</a>. As it is said on
+Cheetah's github to install it only is necessary to execute the following command.
 </p>
 {% highlight bash %}
-git checkout two_dialogs_mockup
-Y2DIR=src/ /usr/sbin/yast2 --ncurses mockup
+gem install cheetah
+{% endhighlight %}
+<p>
+Once cheetah is installed, you can verify that it is true, its very simple to
+execute commands. For example it is possible to extract a .tar in the following
+way.
+</p>
+{% highlight bash %}
+Cheetah.run("tar", "xzf", "foo.tar.gz")
+{% endhighlight %}
+<p>
+But what happens if it is necessary to get some information not only execute a
+command? Cheetah also allows that.
+</p>
+{% highlight bash %}
+output_ls = Cheetah.run("ls", "la", stdout: :capture)
 {% endhighlight %}
 
-<h3>The entries dialog</h3>
+<h3>The Y2Alternatives::Alternative class</h3>
 <p>
-Checking the code you can see that our MockupDialog class is now split into
-EntriesDialog and QueryDialog. The first one is starting to be quite
-interactive, with a search box intended to allow filtering in &quot;real
-time&quot; and a button to launch the other dialog, in addition to the
-previously available buttons to refresh and quit. Let's take a look to the
-event loop.
+Now we are ready to implement a class representing an alternative and offering
+methods to load from the system. Feel free to design and implement your our
+solution. You can find the proposed one in "src/lib/y2_alternatives/alternative.rb"
+right after executing:
+</p>
+{% highlight bash %}
+git checkout domain_models
+{% endhighlight %}
+<p>
+As you can see, the alternative class have two public class methods, "self.all"
+and "self.load", the first returns an array with alternative objects representing
+all the alternatives that exists in the system, and the second return a specific
+alternative object with the given name. The most challenging part of this class
+is to parse the obtained data from the execution of the "update-alternatives"
+command to alternatives objects.
 </p>
 {% highlight ruby %}
-def event_loop
-  loop do
-    case Yast::UI.UserInput
-    when :cancel
-      # Break the loop
-      break
-    when :filter
-      if QueryDialog.new.run
-        log.info "The user has set new arguments for the query"
-      else
-        log.info "The user canceled the query dialog"
+# @return [Array<String>] an array with the names of the alternatives.
+def self.all_names
+  raw_data = Cheetah.run("update-alternatives", "--get-selections", stdout: :capture).lines
+  raw_data.map { |string| string.split.first }
+end
+
+# @return [Array<Alternative>] an array with all alternatives.
+def self.all
+  all_names.map { |name| load(name) }
+end
+
+# @return [Alternative] an alternative with the given name.
+# @param name [String] The name of the alternative to be loaded.
+def self.load(name)
+  raw_data = Cheetah.run("update-alternatives", "--query", name, stdout: :capture).lines
+  return EmptyAlternative.new(name) unless raw_data.include?("\n")
+  alternative = parse_to_map(raw_data.slice(0..raw_data.find_index("\n")))
+  choices = raw_data.slice(raw_data.find_index("\n") + 1..raw_data.length)
+  new(
+    alternative["Name"],
+    alternative["Status"],
+    alternative["Value"],
+    load_choices_from(choices)
+  )
+end
+{% endhighlight %}
+<p>
+But that is not all, we need to keep in mind that our target with this module is
+to manage the update-alternatives switching. And exists two possible actions
+that the user could do with every alternative, change the current choice to
+another one, and set the mode in automatic. The following methods offer these
+options.
+</p>
+{% highlight ruby %}
+def choose!(new_choice_path)
+  if !choices.map(&:path).include?(new_choice_path)
+    raise "The alternative doesn't have any choice with path '#{new_choice_path}'"
+  end
+  @value = new_choice_path
+  @status = "manual"
+  @modified = true
+end
+
+def automatic_mode!
+  @status = "auto"
+  @value = choices.sort_by { |choice| choice.priority.to_i }.last.path
+  @modified = true
+end
+{% endhighlight %}
+<p>
+Note that these methods doesn't modify the alternatives in the system, only the
+object in memory. This is because the typical YaST flow, first the user make the
+changes, and when the user click the Accept button, these changes are saved in
+the system.
+</p>
+<p>To follow this way, the methods avobe put the "@modified" flag to
+true. This flag will be checked in the method below, which responsability is to
+save in the system the changes made to the alternative.
+</p>
+{% highlight ruby %}
+def save
+  return unless @modified
+  STATUS_COMMANDS[@status].execute(self)
+end
+{% endhighlight %}
+<p>
+After check that the alternative has been modified, the save method execute one
+of the existing commands depending on the changes made to the alternative. These
+commands are two, one for set a choice and the other to set the automatic mode.
+Let's see those commands.
+</p>
+{% highlight ruby %}
+require "cheetah"
+
+module Y2Alternatives
+  module Control
+    # Command to change the selected choice of an alternative.
+    class SetChoiceCommand
+      def self.execute(alternative)
+        Cheetah.run("update-alternatives", "--set", alternative.name, alternative.value)
       end
-    when :search
-      log.info "Handling of the search text input not implemented yet"
-    when :refresh
-      log.info "Handling of the refresh button not implemented yet"
-    else
-      log.warn "Unexpected input #{input}"
+    end
+  end
+end
+{% endhighlight %}
+{% highlight ruby %}
+require "cheetah"
+
+module Y2Alternatives
+  module Control
+    # Command to set an alternative in automatic mode.
+    class AutomaticModeCommand
+      def self.execute(alternative)
+        Cheetah.run("update-alternatives", "--auto", alternative.name)
+      end
     end
   end
 end
 {% endhighlight %}
 <p>
-Now if the user clicks on the &quot;change filter&quot; button a new dialog will
-be opened on top of the queries dialog. That new dialog will handle the
-interaction with the user until it's closed. In that moment, it will return a
-value to EntriesDialog which will be again in charge of handling the user
-interaction.
+As you can see both are pretty similar and simple, only one method that execute
+a Cheetah call.
+</p>
+<h3>Laying the foundation</h3>
+<p>
+We already have a basic user interface and some domain models capable of reading
+and saving the information we need. But before starting to put both things
+together we need to ensure that we are standing on solid ground.
 </p>
 <p>
-The other interesting bit of the new event loop is the existence of a new type
-of user input labeled as :search. By monitoring the YaST log file, you can see
-that it happens every time the user modifies the content of the input field with
-the corresponding identifier. This is not the first time we use an input field
-in our interface, but it's the first time we notice that kind of events. What
-makes this input field different from the others? As expected, the answer is in
-our code. This is an excerpt from the &quot;create_dialog&quot; method.
+First of all, we obviously need to write unit tests for our new models.
+Moreover, it would be nice to have some tools to check that our code can be
+properly executed and complies with the YaST standards.
 </p>
-{% highlight ruby %}
-HBox(
-  Label(_("Displaying entries with the following text")),
-  HSpacing(1),
-  InputField(Id(:search), Opt(:hstretch, :notify), "", "")
-)
-{% endhighlight %}
 <p>
-The search input field receives two options. The first one is related to the
-dialog's layout and tells the widget to occupy all the horizontal available
-space. The second one is the answer to our mystery. By default, all libYUI
-widgets except the buttons can be considered &quot;passive&quot; from the events
-point of view. Their purpose is to display information or to allow the user to
-enter some data, but they don't generate events visible by Yast::UI.UserInput.
-The :notify option can be used to change this behavior, so our search box
-generates an input every time its content changes.
-</p>
-
-<h3>The arguments dialog</h3>
-<p>
-QueryDialog is now in charge of displaying most of the widgets that were
-cluttering the interface in the past. That means that there is not much
-interesting code there from the layout point of view. But there is an important
-difference when compared to EntriesDialog - the absence of an event loop. In
-this case, the &quot;run&quot; method follows the typical approach from most
-YaST dialogs and simply returns a result based on the button pressed by the
-user.
-</p>
-{% highlight ruby %}
-def run
-  return nil unless create_dialog
-
-  begin
-    case Yast::UI.UserInput
-    when :cancel
-      false
-    when :ok
-      true
-    else
-      raise "Unexpected input #{input}"
-    end
-  ensure
-    Yast::UI.CloseDialog
-  end
-end
-{% endhighlight %}
-
-<h3>Ready to go</h3>
-<p>
-We are finally happy enough with the mockup, it exposes all the functionality we
-originally wanted to have in a way that works in restrictive ncurses
-environments. It's time to implement some real functionality, so let's grab a
-coffee and prepare for the <a href="step4.html">the fourth step</a>.
+So before we continue writing code, let's take a look to the available YaST
+development tools in the <a href="step4.html">next step</a> of the tutorial.
 </p>
