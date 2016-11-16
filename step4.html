@@ -54,10 +54,20 @@ rake run
 rake console
 {% endhighlight %}
 <p>
-You can paste the example code about Journalctl:Query usage at the end of the
-<a href="step4.html">previous step</a> directly into the interpreter opened by
+You can paste the following example code directly into the interpreter opened by
 &quot;rake console&quot; and everything will work out of the box.
 </p>
+{% highlight ruby %}
+require "y2_alternatives/alternative.rb"
+
+choices = [
+            Y2Alternatives::Alternative::Choice.new("/usr/bin/nano", "20"),
+            Y2Alternatives::Alternative::Choice.new("/usr/bin/vim", "30")
+          ]
+alternative = Y2Alternatives::Alternative.new("editor", "manual", "vim", choices)
+
+puts "The alternative #{alternative.name} is on #{alternative.status} and have the value #{alternative.value}"
+{% endhighlight %}
 <p>
 As mentioned, we will explore other tasks (mostly related to packaging) in an
 upcoming step, but first we need to finish our prototype.
