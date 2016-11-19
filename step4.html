@@ -76,10 +76,10 @@ upcoming step, but first we need to finish our prototype.
 <h3>The RSpec tests</h3>
 <p>
 Of course, no Ruby class is complete without the corresponding unit tests.
-Thus we need unit tests for our Entry and Query classes before proceeding with
-any further action. As many other Ruby-based projects, YaST uses
-<a href="http://rspec.info/">RSpec</a> (version 2 at the time of writing)
-for unit testing. In the
+Thus we need unit tests for our Alternative, AutomaticModeCommand and
+SetChoiceCommand classes before proceeding with any further action. As many
+other Ruby-based projects, YaST uses <a href="http://rspec.info/">RSpec</a>
+(version 2 at the time of writing) for unit testing. In the
 <a href="http://yast.github.io/guidelines.html">guidelines section</a> of the
 YaST home page you will find some recommendations for writing YaST tests.
 </p>
@@ -99,9 +99,10 @@ zypper install -C "rubygem(ruby:$ruby_version:rspec)"
 {% endhighlight %}
 <p>
 Under the &quot;test&quot; directory you will find the corresponding RSpec
-unit tests for Entry and Query. Those tests are just a simple example and
-are not completely exhaustive. Feel free to implement any additional check.
-You can run the tests using the following YaST rake task.
+unit tests for Alternative, AutomaticModeCommand and SetChoiceCommand. Those
+tests are just a simple example and are not completely exhaustive. Feel free to
+implement any additional check. You can run the tests using the following YaST
+rake task.
 </p>
 {% highlight bash %}
 rake test:unit
@@ -130,52 +131,56 @@ ENV["Y2DIR"] = File.expand_path("../../src", __FILE__)
 {% endhighlight %}
 <p>
 When writing YaST tests is very important to
-<a href="http://www.rubydoc.info/gems/rspec-mocks/">stub</a> the usage of SCR
-agents. Otherwise, they will perform their operations on the system running the
-tests, which can lead to inconsistent results and even big troubles if these
-operations involve something more dangerous than reading the systemd journal.
-There are plans to include that functionality into the YaST Ruby bindings in the
-near future and offer convenient RSpec helpers to deal with SCR. Meanwhile, the
-proposal in this tutorial shows a simple solution for the particular case of
-stubbing the calls to journalctl (and other commands) using the
-&quot;.target.bash_output&quot; path.
+<a href="http://www.rubydoc.info/gems/rspec-mocks/">stub</a> the usage of
+Cheetah commands. Otherwise, they will perform their operations on the system
+running the tests, which can lead to inconsistent results and even big troubles
+if these operations involve something more dangerous than changing the status of
+an alternative.
 </p>
 {% highlight ruby %}
-# Stub a command execution
-def allow_to_execute(cmd)
-  path = Yast::Path.new(".target.bash_output")
-  allow(Yast::SCR).to receive(:Execute).with(path, cmd)
+def alternatives_pip_stub
+  allow(Cheetah).to receive(:run).with(
+    "update-alternatives", "--query", "pip", stdout: :capture
+  ).and_return(
+    "Name: pip\n" \
+      "Link: /usr/bin/pip\n" \
+      "Status: auto\n" \
+      "Best: /usr/bin/pip3.4\n" \
+      "Value: /usr/bin/pip3.4\n" \
+      "\n" \
+      "Alternative: /usr/bin/pip3.4\n" \
+      "Priority: 30\n" \
+  )
 end
 {% endhighlight %}
 <p>
-The following code extracted from entry_test.rb shows how the above
-helper method can then be used (together with other methods defined in
-spec_helper.rb) to write safe specs that simulate the underlying system.
+The following code extracted from alternative_spec.rb shows how the above
+helper method can then be used (also it can be used together with other methods
+defined in spec_helper.rb) to write safe specs that simulate the underlying
+system.
 </p>
 {% highlight ruby %}
-describe ".all" do
-  subject { Journalctl::Entry.all }
-  # Stub journalctl call
-  before do
-    allow_to_execute(/LANG=C journalctl/).and_return(result)
+describe ".load" do
+  subject(:loaded_alternative) { Y2Alternatives::Alternative.load("pip") }
+  subject(:alternative_with_slaves) { Y2Alternatives::Alternative.load("editor") }
+
+  it "returns an Alternative object" do
+    alternatives_pip_stub
+    expect(loaded_alternative).to be_an Y2Alternatives::Alternative
   end
 
-  context "when journalctl reports 'Failed to determine timestamp'" do
-    let(:result) {
-      journalctl_error("Failed to determine timestamp: Cannot assign")
-    }
-
-    it "returns an empty array" do
-      expect(subject).to eq([])
-    end
+  it "initializes the name, status and value" do
+    alternatives_pip_stub
+    expect(loaded_alternative).to have_attributes(
+      name: "pip", status: "auto", value: "/usr/bin/pip3.4"
+    )
   end
-end
 {% endhighlight %}
 
 <h2>Almost there</h2>
 <p>
 Now we can finally say that we have all the pieces: tested models, a user
-interface and all the necessary tools. Only <a href="step6.html">one step</a>
+interface and all the necessary tools. Only <a href="step5.html">one step</a>
 away from our first fully-functional YaST module (and two steps away
 from the end of the training).
 </p>
