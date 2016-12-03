@@ -21,39 +21,6 @@ Play a little bit with the result (both as a regular user and as root) before
 diving into the code.
 </p>
 
-<h3>Separated presentation</h3>
-<p>
-YaST does not enforce any particular software pattern to structure the code of
-complex modules. Moreover, the example journalctl module is intentionally
-simple, so we can focus on the YaST characteristics and avoid complex
-architectural disquisitions. Even though, we don't want to have code in our
-dialogs that is not strictly related to drawing widgets and driving the
-interaction with the user and we obviously don't want to mess our Entry and
-Query models with presentation logic.
-</p>
-<p>
-In order to keep things tidy, the example code you have just fetched uses
-presenters to intermediate between the domain models and the dialogs. Presenters
-are a very popular approach to implement the
-<a href="http://martinfowler.com/eaaDev/SeparatedPresentation.html">separated
-presentation pattern</a> using delegators. Instead of accessing directly to the
-domain classes, the dialogs rely on the corresponding presenters for those
-classes.
-</p>
-<p>
-Same as other classes in this tutorial, the included unit tests for
-EntryPresenter and QueryPresenter are not as exhaustive as they should be and
-are offered only as a starting point for writing a more comprehensive suite.
-</p>
-<p>
-Although the usage of presenters is quite common in other development
-environments like the Ruby on Rails community, it's not the standard way of
-organizing the code in the existing YaST modules. In fact, there is currently
-nothing like a &quot;standard way or organizing the code&quot; in YaST. Thus,
-if the usage of presenters does not fit your problem or your personal
-preferences, feel free to use any other approach.
-</p>
-
 <h3>From mockup to reality</h3>
 <p>
 In the original mockup there was no binding between the widgets and
