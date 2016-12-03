@@ -25,19 +25,19 @@ diving into the code.
 <p>
 In the original mockup there was no binding between the widgets and
 any real information coming from the system or the user. Now the
-EntriesDialog object keeps three instance variables to store that information.
+ListAlternatives object keeps three instance variables to store that information.
 </p>
 <ul>
-  <li>@query is a QueryPresenter object to keep the filters and associated
-    information.</li>
-  <li>@entries is an array of EntryPresenter objects fetched by @query
-    from the systemd journal.</li>
-  <li>@search is the string used to filter the displayed entries, entered by
-    the user in the corresponding text input field.</li>
+  <li>@alternatives_list is an array of Alternative object obtained from .all
+    method from the Alternative class</li>
+  <li>@multi_choice_only is a boolean to filter the alternatives with only one
+    choice, is setted by the user using the checkbox.</li>
+  <li>@search is the string used to filter the displayed alternatives, entered
+    by the user in the corresponding text input field.</li>
 </ul>
 <p>
 In addition, another subtle but meaningful change has be done by renaming the
-client from mockup.rb to journalctl.rb.
+client from mockup.rb to alternatives.rb.
 </p>
 
 <h3>A more interactive interface</h3>
