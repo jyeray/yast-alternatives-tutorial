@@ -42,9 +42,10 @@ client from mockup.rb to alternatives.rb.
 
 <h3>A more interactive interface</h3>
 <p>
-As opposed to the mockup, in which the only possible interaction was opening and
-closing the dialogs, our module can now react to many events, like shown in
-the new event loop.
+As opposed to the mockup, in which only contained an empty table and the only
+possible interaction was to close the dialog, our module now shows the existing
+alternatives in the system and and react to many events, like shown in the new
+event loop.
 </p>
 {% highlight ruby %}
 def event_loop
@@ -53,40 +54,34 @@ def event_loop
     when :cancel
       # Break the loop
       break
-    when :filter
-      # The user clicked the filter button
-      if read_query
-        read_entries
-        redraw_query
-        redraw_table
-      end
+    when :accept
+      # Break the loop
+      break
+    when :multi_choice_only
+      read_multi_choice_only
+      redraw_table
     when :search
-      # The content of the search box changed
       read_search
       redraw_table
-    when :refresh
-      # The user clicked the refresh button
-      read_entries
-      redraw_table
     else
-      log.warn "Unexpected input #{input}"
+      log.warn "Unexpected input."
     end
   end
 end
 {% endhighlight %}
 <p>
-The loop relies on three private methods to set the value of the instance
-variables (unsurprisingly called read_query, read_entries and read_search)
-and two methods (redraw_query and redraw_table) to update the user interface.
+The loop relies on two private methods to set the value of the instance
+variables (unsurprisingly called read_search and read_multi_choice_only) and one
+method called redraw_table used to update the user interface.
 </p>
 <p>
 Let start with the latter. The method redraw_table is just a one-liner that uses
 the ChangeWidget function to alter the :Items property of the widget with the
-identifier :entries_table.
+identifier :alternatives_table.
 </p>
 {% highlight ruby %}
 def redraw_table
-  Yast::UI.ChangeWidget(Id(:entries_table), :Items, table_items)
+  Yast::UI.ChangeWidget(:alternatives_table, :Items, map_alternatives_items)
 end
 {% endhighlight %}
 <p>
@@ -96,89 +91,16 @@ to change other properties like the status of a widget (:Enabled), its label
 (:Label), its content (:Value), the selected item (:CurrentItem) and many more.
 </p>
 <p>
-But sometimes altering an already existing widget is not enough and is better
-to fully replace it with something else. That's exactly what redraw_query does
-with one of the labels at the top of the dialog.
-</p>
-{% highlight ruby %}
-def redraw_query
-  Yast::UI.ReplaceWidget(Id(:query), query_description)
-end
-{% endhighlight %}
-<p>
-But replacing widgets needs some preparation. ReplaceWidget will only work on a
-special type of widget called ReplacePoint which has no visual effect and
-whose only purpose is to act as a marker for ReplaceWidget within the widgets
-tree, as you can see in the following excerpt from EntriesDialog.
-</p>
-{% highlight ruby %}
-def create_dialog
-  Yast::UI.OpenDialog(
-    Opt(:decorated, :defaultsize),
-    VBox(
-      # Header
-      Heading(...),
-
-      # Filters
-      Left(...),
-      Left(ReplacePoint(Id(:query), query_description)),
-      VSpacing(0.3),
-
-      # Log entries
-      table,
-      VSpacing(0.3),
-
-      # Footer buttons
-      HBox(...)
-    )
-  )
-end
-
-def query_description
-  Label(@query.filters_description)
-end
-{% endhighlight %}
-<p>
 But besides changing the interface to reflect the changes, we also need to read
 the content of the widgets. The simplest example is the read_search method
 used to set the value of @search reading it from the corresponding input field.
+The read_multi_choice_only method works in the same way.
 </p>
 {% highlight ruby %}
 def read_search
-  @search = Yast::UI.QueryWidget(Id(:search), :Value)
-  log.info "Search string set to '#{@search}'"
+  @search = Yast::UI.QueryWidget(:search, :Value)
 end
 {% endhighlight %}
-<p>
-The QueryWidget function can be used to check the value of many different
-properties. The following method uses it for reading the value of all the
-relevant widgets in QueryDialog.
-</p>
-{% highlight ruby %}
-def query_from_widgets
-  boot = Yast::UI.QueryWidget(Id(:boot), :CurrentButton)
-  filters = { boot: boot }
-
-  QueryPresenter.additional_filters.each do |filter|
-    name = filter[:name]
-    # If the checkbox is checked
-    if Yast::UI.QueryWidget(Id(name), :Value)
-      # Read the widget...
-      value = Yast::UI.QueryWidget(Id(:"#{name}_value"), :Value)
-      # ...discarding empty values
-      filters[name] = value unless value.empty?
-    end
-  end
-
-  QueryPresenter.new(filters)
-end
-{% endhighlight %}
-<p>
-When the user pushes the &quot;change filter&quot; button, a new
-QueryDialog is opened. When the user pushes the &quot;ok&quot; button, the
-dialog uses the function above to construct a new QueryPresenter object that is
-then returned and stored in the @query instance variable of the caller.
-</p>
 <p>
 The rest of the code in the proposed solution does not rely in any specific
 YaST feature and, thus, it should be pretty straightforward to read and
